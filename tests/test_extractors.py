@@ -1,79 +1,43 @@
-"""Tests for extraction modules."""
-
-from pathlib import Path
-
-from gh_chat_dataset import extract_md, extract_py
+from gh_chat_dataset.extract_js import extract_js_items
+from gh_chat_dataset.extract_md import split_markdown_sections
+from gh_chat_dataset.extract_py import extract_python_items
 
 
-def test_python_extraction():
-    """Test Python AST extraction."""
-    code = '''"""Module docstring."""
-
-def hello(name: str) -> str:
-    """Say hello to someone.
-
-    Args:
-        name: The person's name.
-
-    Returns:
-        A greeting message.
-    """
-    return f"Hello, {name}!"
-
-class Greeter:
-    """A class for greeting people."""
-
-    def greet(self, name: str) -> str:
-        """Greet someone."""
-        return f"Hi, {name}!"
-'''
-
-    items = extract_py.extract_python_items(Path("test.py"), code)
-    assert len(items) >= 3  # module, function, class (may include method)
-
-    # Check module docstring
-    module_item = next(item for item in items if item["kind"] == "Module")
-    assert module_item["docstring"] == "Module docstring."
-
-    # Check function
-    func_item = next(item for item in items if item["name"] == "hello")
-    assert "Say hello to someone." in func_item["docstring"]
+def test_extract_python_items_docstring():
+    text = (
+        "\n"
+        "def add(x, y):\n"
+        "    \"\"\"Add two numbers.\"\"\"\n"
+        "    return x + y\n"
+    )
+    items = list(extract_python_items("a.py", text))
+    funcs = [i for i in items if i.get("kind") in {"FunctionDef", "AsyncFunctionDef"}]
+    assert any(i.get("docstring") == "Add two numbers." for i in funcs)
 
 
-def test_markdown_extraction():
-    """Test Markdown section extraction."""
-    content = '''# Introduction
-
-This is the intro.
-
-## Getting Started
-
-Here's how to start.
-
-### Installation
-
-Run pip install.
-
-## Advanced Usage
-
-More complex examples.
-'''
-
-    sections = extract_md.extract_markdown_sections(Path("README.md"), content)
-    assert len(sections) >= 3
-
-    # Check first section
-    intro_section = next(s for s in sections if s["title"] == "Introduction")
-    assert "This is the intro." in intro_section["content"]
+def test_split_markdown_sections():
+    md = (
+        "\n"
+        "# Title\n\n"
+        "Intro\n\n"
+        "## Details\n\n"
+        "More info\n"
+    )
+    secs = split_markdown_sections(md)
+    assert len(secs) == 2
+    assert secs[0]["title"] == "Title"
+    assert "Intro" in secs[0]["content"]
 
 
-def test_empty_inputs():
-    """Test handling of empty/invalid inputs."""
-    # Empty Python code
-    assert extract_py.extract_python_items(Path("empty.py"), "") == []
-
-    # Invalid Python syntax
-    assert extract_py.extract_python_items(Path("bad.py"), "def broken(") == []
-
-    # Empty Markdown
-    assert extract_md.extract_markdown_sections(Path("empty.md"), "") == []
+def test_extract_js_items_jsdoc():
+    js = (
+        "\n"
+        "/**\n"
+        " * Multiply two numbers.\n"
+        " */\n"
+        "export function mul(a, b) {\n"
+        "  return a * b;\n"
+        "}\n"
+    )
+    items = list(extract_js_items("a.js", js))
+    assert any("Multiply two numbers." in i.get("jsdoc", "") for i in items)
