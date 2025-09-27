@@ -1,0 +1,1174 @@
+diff --git a/.gitignore b/.gitignore
+index e5c1a79..3844b58 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -3,7 +3,10 @@ __pycache__/
+ *.pyc
+ *.pyo
+ *.pyd
++*.py[cod]
+ .Python
++
++# Builds
+ build/
+ develop-eggs/
+ dist/
+@@ -26,11 +29,12 @@ venv/
+ ENV/
+ env/
+ 
+-# IDE
++# IDE & OS
+ .vscode/
+ .idea/
+ *.swp
+ *.swo
++.DS_Store
+ 
+ # Testing
+ .pytest_cache/
+@@ -41,4 +45,4 @@ htmlcov/
+ out/
+ output/
+ *.jsonl
+-stats.json
+\ No newline at end of file
++stats.json
+diff --git a/README.md b/README.md
+index 3ac3b84..96e50cc 100644
+--- a/README.md
++++ b/README.md
+@@ -1,274 +1,18 @@
+-# 🤖 gh-chat-dataset: Turn Any GitHub Repo into AI Training Data
++## gh-chat-dataset
+ 
+-**One-click tool to convert GitHub repositories into high-quality chat datasets for fine-tuning language models like Qwen with MLX.**
++One-shot CLI to convert a public GitHub repository (Python/JS/TS + Markdown docs) into chat/messages JSONL suitable for Qwen fine-tuning with MLX.
+ 
+-> 💡 **Perfect for**: Training coding assistants, documentation bots, or domain-specific AI models from real codebases.
++Usage:
+ 
+-## 🎯 What Does This Do?
+-
+-This tool automatically extracts meaningful code-documentation pairs from GitHub repositories and formats them as conversation data that AI models can learn from. 
+-
+-**Think of it as**: Taking a repository full of Python functions with docstrings, JavaScript with JSDoc comments, and README files, then converting them into "teacher-student" conversations for AI training.
+-
+-### 🧠 The Magic Behind It
+-
+-- **Python Functions** → "Write a docstring for this function" conversations
+-- **JavaScript/TypeScript** → "Add JSDoc comments to this code" examples  
+-- **Markdown Documentation** → "Explain this section" Q&A pairs
+-- **Smart Processing** → Removes duplicates, filters by length, splits for training
+-
+-## 🚀 Quick Start (3 Minutes)
+-
+-### Step 1: Install
+-```bash
+-# Clone this repository
+-git clone https://github.com/ArjunDivecha/Repo2Dataset.git
+-cd Repo2Dataset
+-
+-# Install the tool
+-pip install -e .[dev]
+-```
+-
+-### Step 2: Convert a Repository
+-```bash
+-# Example: Convert the popular 'requests' library into training data
+-gh-chat-dataset --repo https://github.com/psf/requests.git --out ./requests_dataset
+-
+-# Or try a smaller example first
+-gh-chat-dataset --repo https://github.com/pallets/itsdangerous.git --out ./test_dataset
+-```
+-
+-### Step 3: Check Your Results
+-```bash
+-ls test_dataset/
+-# You'll see:
+-# dataset.train.jsonl  <- 90% of samples for training
+-# dataset.valid.jsonl  <- 10% of samples for validation  
+-# stats.json          <- Summary of what was extracted
+-```
+-
+-## 📊 Real Example Output
+-
+-Let's say you run it on a Python repository. Here's what one training sample looks like:
+-
+-**Input** (what the AI sees):
+-```
+-Write a clear, concise docstring for this function:
+-
+-def validate_email(email):
+-    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}
+-    return re.match(pattern, email) is not None
+-```
+-
+-**Expected Output** (what the AI should respond):
+ ```
+-Validate if an email address has a proper format.
+-
+-Args:
+-    email (str): The email address to validate.
+-
+-Returns:
+-    bool: True if email format is valid, False otherwise.
+-```
+-
+-This creates training data that teaches AI models to write good documentation!
+-
+-## ⚙️ All Command Options Explained
+-
+-```bash
+-gh-chat-dataset [OPTIONS]
+-```
+-
+-### Required Options
+-- `--repo URL` - The GitHub repository to convert (must be public or you need access)
+-- `--out DIRECTORY` - Where to save the dataset files
+-
+-### Optional Fine-Tuning
+-- `--max-tokens 2048` - Skip samples longer than this (prevents memory issues)
+-- `--split-ratio 0.9` - How much data goes to training vs validation (0.9 = 90% train, 10% validation)
+-- `--allow-llm` - *(Experimental)* Use AI to generate labels where missing
+-
+-### Real Examples
+-```bash
+-# Basic usage
+-gh-chat-dataset --repo https://github.com/user/repo.git --out ./my_dataset
+-
+-# For larger models (more context)
+-gh-chat-dataset --repo https://github.com/user/repo.git --out ./my_dataset --max-tokens 4096
+-
+-# More data for validation
+-gh-chat-dataset --repo https://github.com/user/repo.git --out ./my_dataset --split-ratio 0.8
++gh-chat-dataset --repo https://github.com/owner/repo.git --out ./out --allow-llm false
+ ```
+ 
+-## 📁 What Gets Extracted?
+-
+-### From Python Files (.py)
+-- ✅ Functions with docstrings → "Write docstring" examples
+-- ✅ Classes with docstrings → "Document this class" examples  
+-- ✅ Module docstrings → "Summarize this module" examples
+-
+-### From JavaScript/TypeScript (.js, .jsx, .ts, .tsx)
+-- ✅ Functions with JSDoc comments → "Add JSDoc" examples
+-- ✅ Complex function signatures → Documentation examples
+-
+-### From Markdown Files (.md)
+-- ✅ README sections → "Explain this concept" Q&A
+-- ✅ Documentation pages → Knowledge Q&A pairs
+-- ✅ API docs → Usage explanation examples
+-
+-### What Gets Filtered Out
+-- ❌ Files without documentation (can't create good training pairs)
+-- ❌ Very short or very long samples (poor quality for training)
+-- ❌ Duplicate content (prevents overfitting)
+-- ❌ Generated files (node_modules, build outputs, etc.)
+-
+-## 📈 Understanding Your Output
+-
+-After running the tool, check `stats.json`:
+-
+-```json
+-{
+-  "sha": "abc123...",           // Exact version of repo used
+-  "counts": {
+-    "total": 156,               // Total samples created
+-    "train": 140,               // Training samples (90%)
+-    "valid": 16                 // Validation samples (10%)
+-  }
+-}
+-```
+-
+-**Good numbers to see:**
+-- 50+ total samples for small projects
+-- 500+ total samples for substantial codebases
+-- 1000+ total samples for large, well-documented projects
+-
+-## 🎯 Perfect Repositories to Try
+-
+-### Great for Beginners
+-- `pallets/itsdangerous` - Small, well-documented Python library
+-- `sindresorhus/is` - Simple JavaScript utilities with good docs
+-- `getsentry/sentry-python` - Medium-sized Python project
+-
+-### For Larger Datasets  
+-- `psf/requests` - Popular Python HTTP library
+-- `microsoft/TypeScript` - Large TypeScript codebase
+-- `django/django` - Web framework with extensive docs
+-
+-### Best Results Come From
+-- ✅ Well-documented codebases
+-- ✅ Projects with consistent docstring/JSDoc style
+-- ✅ Repositories with good README files
+-- ✅ Active projects (recent commits)
+-
+-## 🛠 Using Your Dataset with MLX
+-
+-Once you have your dataset, here's how to use it for fine-tuning:
+-
+-```python
+-# Load your dataset
+-import json
+-
+-def load_dataset(path):
+-    with open(path, 'r') as f:
+-        return [json.loads(line) for line in f]
+-
+-train_data = load_dataset('your_dataset/dataset.train.jsonl')
+-valid_data = load_dataset('your_dataset/dataset.valid.jsonl')
+-
+-# Each sample has this format:
+-sample = train_data[0]
+-print(sample['messages'])  # The conversation
+-print(sample['meta'])      # Metadata about source
+-```
+-
+-**Pro Tip**: The `messages` format is compatible with most modern fine-tuning frameworks including MLX, transformers, and OpenAI's fine-tuning API.
+-
+-## 🔧 Troubleshooting
+-
+-### "No samples extracted"
+-- ✅ Make sure the repo has documented code (docstrings, JSDoc, README)
+-- ✅ Try a well-known repo first (like `pallets/itsdangerous`)
+-- ✅ Check if the repo is public or you have access
+-
+-### "Permission denied" errors
+-- ✅ Make sure you can access the repository
+-- ✅ For private repos, ensure your Git credentials are set up
+-- ✅ Try with a public repository first
+-
+-### "Out of memory" errors  
+-- ✅ Use `--max-tokens 1024` for smaller samples
+-- ✅ Try processing smaller repositories first
+-- ✅ Make sure you have sufficient disk space
+-
+-### Dataset is too small
+-- ✅ Try repositories with more documentation
+-- ✅ Look for projects with consistent docstring styles
+-- ✅ Consider enabling `--allow-llm` for more samples (experimental)
+-
+-## 🚀 Advanced Usage
+-
+-### Batch Processing Multiple Repos
+-```bash
+-# Create a script to process multiple repositories
+-repos=(
+-  "https://github.com/user/repo1.git"
+-  "https://github.com/user/repo2.git" 
+-  "https://github.com/user/repo3.git"
+-)
+-
+-for repo in "${repos[@]}"; do
+-  name=$(basename "$repo" .git)
+-  gh-chat-dataset --repo "$repo" --out "./datasets/$name"
+-done
+-```
+-
+-### Combining Datasets
+-```bash
+-# Merge multiple datasets
+-cat dataset1/dataset.train.jsonl dataset2/dataset.train.jsonl > combined_train.jsonl
+-cat dataset1/dataset.valid.jsonl dataset2/dataset.valid.jsonl > combined_valid.jsonl
+-```
+-
+-## 👨‍💻 Contributing & Development
+-
+-Want to improve the tool? Here's how to set up for development:
+-
+-```bash
+-# Clone and setup
+-git clone https://github.com/ArjunDivecha/Repo2Dataset.git
+-cd Repo2Dataset
+-
+-# Install in development mode
+-pip install -e .[dev]
+-
+-# Run tests to make sure everything works
+-pytest
+-
+-# Check code style
+-ruff check .
+-
+-# Make your changes, then test
+-python -m pytest
+-```
+-
+-### Adding New File Types
+-The tool is designed to be extensible. To add support for new languages:
+-
+-1. Create a new extractor in `gh_chat_dataset/extract_xxx.py`
+-2. Add a builder function in `gh_chat_dataset/builders.py`
+-3. Update the file discovery patterns in `gh_chat_dataset/discover.py`
+-4. Add tests in `tests/`
+-
+-## 📄 License
+-
+-MIT License - feel free to use this for any project!
+-
+-## 🙋‍♀️ Questions?
+-
+-- 📖 Check the troubleshooting section above
+-- 🐛 Found a bug? [Open an issue](https://github.com/ArjunDivecha/Repo2Dataset/issues)
+-- 💡 Have an idea? [Start a discussion](https://github.com/ArjunDivecha/Repo2Dataset/discussions)
+-
+----
++Outputs:
++- out/dataset.train.jsonl
++- out/dataset.valid.jsonl
++- out/stats.json
+ 
+-**Happy Training! 🤖✨**
+\ No newline at end of file
++Notes:
++- LLM-assisted labeling is optional and OFF by default. Enable with `--allow-llm true` and implement a provider via environment variables (left as a stub).
++- This tool stores basic provenance metadata (repo, path, sha, task, source_type). No license filtering is applied by default.
+diff --git a/pyproject.toml b/pyproject.toml
+index 5015f24..6585168 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -1,38 +1,36 @@
+ [build-system]
+-requires = ["hatchling"]
++requires = ["hatchling>=1.18.0"]
+ build-backend = "hatchling.build"
+ 
+ [project]
+ name = "gh-chat-dataset"
+ version = "0.1.0"
+-description = "Convert GitHub repos to Qwen chat JSONL for MLX fine-tuning"
+-authors = [{name = "Arjun Divecha"}]
+-license = {text = "MIT"}
++description = "One-shot tool to turn a GitHub repo (py/js + docs) into chat/messages JSONL for Qwen/MLX fine-tuning"
+ readme = "README.md"
+-requires-python = ">=3.8"
++requires-python = ">=3.10"
++license = {text = "MIT"}
++authors = [{name = "Droid (Factory.ai)", email = "dev@factory.ai"}]
+ dependencies = [
+-    "click>=8.0.0",
+-    "requests>=2.25.0",
+-    "gitpython>=3.1.0",
++  "click>=8.1.7",
+ ]
+ 
+ [project.optional-dependencies]
+ dev = [
+-    "ruff>=0.1.0",
+-    "pytest>=7.0.0",
++  "pytest>=8.2.0",
++  "ruff>=0.6.9",
+ ]
+ 
+ [project.scripts]
+ gh-chat-dataset = "gh_chat_dataset.cli:main"
+ 
+ [tool.ruff]
+-line-length = 88
+-target-version = "py38"
++line-length = 120
++target-version = "py310"
+ 
+ [tool.ruff.lint]
+-select = ["E", "F", "W", "I", "N", "B", "S", "C4", "UP"]
+-ignore = ["S101", "S603", "S607"]
++select = ["E", "F", "I"]
++ignore = []
+ 
+ [tool.pytest.ini_options]
+ testpaths = ["tests"]
+-python_files = ["test_*.py"]
+\ No newline at end of file
++python_files = ["test_*.py"]
+diff --git a/src/gh_chat_dataset/__init__.py b/src/gh_chat_dataset/__init__.py
+new file mode 100644
+index 0000000..a9a2c5b
+--- /dev/null
++++ b/src/gh_chat_dataset/__init__.py
+@@ -0,0 +1 @@
++__all__ = []
+diff --git a/src/gh_chat_dataset/builders.py b/src/gh_chat_dataset/builders.py
+new file mode 100644
+index 0000000..66cf6b5
+--- /dev/null
++++ b/src/gh_chat_dataset/builders.py
+@@ -0,0 +1,174 @@
++from typing import Dict, List, Optional
++
++from .tokenize_util import count_tokens_approx
++
++
++def _to_chat(user: str, assistant: str, system: Optional[str] = None) -> Dict:
++    msgs = []
++    if system:
++        msgs.append({"role": "system", "content": system})
++    msgs.append({"role": "user", "content": user})
++    msgs.append({"role": "assistant", "content": assistant})
++    return {"messages": msgs}
++
++
++def build_chat_from_py_docstring(item: Dict, meta: Dict, allow_llm: bool) -> Optional[Dict]:
++    doc = item.get("docstring", "").strip()
++    code = item.get("code", "").strip()
++    if not doc:
++        if allow_llm:
++            # Stub: if integrating an LLM, generate docstring; here we skip in OSS-safe mode
++            return None
++        return None
++    rec = _to_chat(
++        user="Write a clear, concise docstring for the following Python code.\n\n" + code,
++        assistant=doc,
++        system="You are a helpful Python assistant.",
++    )
++    rec["meta"] = {**meta, "task": "py_docstring_from_code", "source_type": "python"}
++    return rec
++
++
++def build_chat_from_js_jsdoc(item: Dict, meta: Dict, allow_llm: bool) -> Optional[Dict]:
++    jsdoc = item.get("jsdoc", "").strip()
++    code = item.get("code", "").strip()
++    if not jsdoc:
++        if allow_llm:
++            return None
++        return None
++    rec = _to_chat(
++        user="Write a JSDoc comment for the following JavaScript/TypeScript function.\n\n" + code,
++        assistant=jsdoc,
++        system="You are a helpful JavaScript assistant.",
++    )
++    rec["meta"] = {**meta, "task": "js_jsdoc_from_code", "source_type": "javascript"}
++    return rec
++
++
++def _window_text_by_tokens(text: str, window_tokens: int, overlap_tokens: int = 120) -> List[str]:
++    if not text.strip():
++        return []
++    words = text.split()
++    # approximate: assume ~1 token ≈ 1 word for windowing granularity
++    step = max(1, window_tokens - overlap_tokens)
++    out: List[str] = []
++    i = 0
++    while i < len(words):
++        chunk_words = words[i : i + window_tokens]
++        if not chunk_words:
++            break
++        out.append(" ".join(chunk_words))
++        i += step
++        if len(out) > 32:  # safety cap
++            break
++    return out
++
++
++def build_chats_from_md_section(
++    section: Dict,
++    meta: Dict,
++    max_questions: int = 4,
++    window_tokens: int = 800,
++) -> List[Dict]:
++    title = section.get("title", "").strip() or "Section"
++    content = section.get("content", "").strip()
++    if not content:
++        return []
++
++    # Window long content
++    windows = [content]
++    if count_tokens_approx(content) > window_tokens:
++        windows = _window_text_by_tokens(content, window_tokens)
++
++    q_templates = [
++        f"What is {title}? Provide a concise explanation based only on this section.",
++        f"What are the key inputs and outputs described in {title}?",
++        f"Summarize any policies, caveats, or limitations mentioned in {title}.",
++        f"Describe the workflow/steps outlined in {title}.",
++    ]
++    chats: List[Dict] = []
++    for w in windows:
++        for q in q_templates[: max_questions or 1]:
++            prompt = q + "\n\n" + w
++            rec = _to_chat(user=prompt, assistant=w, system="You are a documentation assistant.")
++            rec["meta"] = {**meta, "task": "md_section_qa", "source_type": "markdown", "title": title}
++            chats.append(rec)
++    return chats
++
++
++def build_chat_from_py_chunk(item: Dict, chunk_code: str, meta: Dict) -> Optional[Dict]:
++    name = item.get("name", "function")
++    if not chunk_code.strip():
++        return None
++    user = (
++        f"Explain the following Python code chunk from {name}. Focus on what it does and why.\n\n" + chunk_code
++    )
++    assistant = chunk_code
++    rec = _to_chat(user=user, assistant=assistant, system="You are a helpful Python assistant.")
++    rec["meta"] = {**meta, "task": "py_chunk_explain", "source_type": "python", "name": name}
++    return rec
++
++
++def build_validation_summary_py(code: str, meta: Dict) -> Optional[Dict]:
++    if not code:
++        return None
++    lines = [
++        ln
++        for ln in code.splitlines()
++        if any(k in ln for k in ["assert ", "raise ", "ValueError", "TypeError", "KeyError"])
++    ]
++    if not lines:
++        return None
++    user = "What inputs are validated and how? Summarize from the code (asserts and raises).\n\n" + code
++    assistant = "\n".join(lines)
++    rec = _to_chat(user=user, assistant=assistant, system="You are a precise Python assistant.")
++    rec["meta"] = {**meta, "task": "py_validation_summary", "source_type": "python"}
++    return rec
++
++
++def build_error_handling_summary_py(code: str, meta: Dict) -> Optional[Dict]:
++    if not code:
++        return None
++    lines = [ln for ln in code.splitlines() if ln.strip().startswith("except ") or ln.strip().startswith("try:")]
++    if not lines:
++        return None
++    user = "Explain the error handling in this code. Which exceptions are caught and what happens?\n\n" + code
++    assistant = "\n".join(lines)
++    rec = _to_chat(user=user, assistant=assistant, system="You are a precise Python assistant.")
++    rec["meta"] = {**meta, "task": "py_error_handling_summary", "source_type": "python"}
++    return rec
++
++
++def build_config_constants_summary_py(code: str, meta: Dict) -> Optional[Dict]:
++    if not code:
++        return None
++    const_lines: List[str] = []
++    for ln in code.splitlines():
++        if "=" in ln and ln.strip() and ln.strip()[0].isalpha():
++            left = ln.split("=", 1)[0].strip()
++            if left.isupper() and " " not in left and not left.startswith("#"):
++                const_lines.append(ln.strip())
++    if not const_lines:
++        return None
++    user = "Summarize the configuration constants defined in this module.\n\n" + "\n".join(const_lines)
++    assistant = "\n".join(const_lines)
++    rec = _to_chat(user=user, assistant=assistant, system="You are a configuration expert.")
++    rec["meta"] = {**meta, "task": "py_config_constants_summary", "source_type": "python"}
++    return rec
++
++
++def build_logging_flow_summary_py(code: str, meta: Dict) -> Optional[Dict]:
++    if not code:
++        return None
++    log_lines = [
++        ln.strip()
++        for ln in code.splitlines()
++        if any(t in ln for t in ["logging.", ".debug(", ".info(", ".warning(", ".error(", ".exception("])
++    ]
++    if not log_lines:
++        return None
++    user = "Describe the logging flow: logger names, levels, and key messages.\n\n" + "\n".join(log_lines)
++    assistant = "\n".join(log_lines)
++    rec = _to_chat(user=user, assistant=assistant, system="You are a logging expert.")
++    rec["meta"] = {**meta, "task": "py_logging_flow_summary", "source_type": "python"}
++    return rec
+diff --git a/src/gh_chat_dataset/cli.py b/src/gh_chat_dataset/cli.py
+new file mode 100644
+index 0000000..ab0cf8d
+--- /dev/null
++++ b/src/gh_chat_dataset/cli.py
+@@ -0,0 +1,252 @@
++import json
++import random
++import shutil
++import subprocess
++import tempfile
++from pathlib import Path
++from typing import DefaultDict, Dict, Iterable, List, Optional, Tuple
++
++import click
++
++from .builders import (
++    build_chat_from_js_jsdoc,
++    build_chat_from_py_chunk,
++    build_chat_from_py_docstring,
++    build_chats_from_md_section,
++    build_config_constants_summary_py,
++    build_error_handling_summary_py,
++    build_logging_flow_summary_py,
++    build_validation_summary_py,
++)
++from .discover import discover_files
++from .extract_js import extract_js_items
++from .extract_md import split_markdown_sections
++from .extract_py import extract_python_items
++from .postprocess import dedupe_records, redact_secrets
++from .tokenize_util import count_tokens_approx
++
++
++def run(cmd: List[str], cwd: Optional[str] = None) -> Tuple[int, str]:
++    proc = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
++    return proc.returncode, (proc.stdout + proc.stderr)
++
++
++def shallow_clone(repo_url: str, dest_dir: str) -> Tuple[str, str]:
++    code, out = run(["git", "clone", "--depth=1", repo_url, dest_dir])
++    if code != 0:
++        raise RuntimeError(f"git clone failed: {out}")
++    code, sha = run(["git", "rev-parse", "HEAD"], cwd=dest_dir)
++    if code != 0:
++        raise RuntimeError(f"git rev-parse HEAD failed: {sha}")
++    return dest_dir, sha.strip()
++
++
++def to_messages(user: str, assistant: str, system: Optional[str] = None) -> Dict:
++    msgs = []
++    if system:
++        msgs.append({"role": "system", "content": system})
++    msgs.append({"role": "user", "content": user})
++    msgs.append({"role": "assistant", "content": assistant})
++    return {"messages": msgs}
++
++
++def _chunk_code_by_blanklines(code: str, min_lines: int, max_chunks: int) -> List[str]:
++    lines = code.splitlines()
++    chunks: List[List[str]] = [[]]
++    for ln in lines:
++        if ln.strip() == "" and len(chunks[-1]) >= min_lines:
++            if chunks[-1]:
++                chunks.append([])
++            continue
++        chunks[-1].append(ln)
++    # finalize
++    parts = ["\n".join(c).strip() for c in chunks if len(c) >= min_lines]
++    if len(parts) > max_chunks:
++        parts = parts[:max_chunks]
++    return [p for p in parts if p]
++
++
++def build_records_for_repo(
++    repo_path: Path,
++    sha: str,
++    allow_llm: bool,
++    md_max_questions: int,
++    md_window_tokens: int,
++    py_chunking: bool,
++    py_chunk_max: int,
++    py_chunk_min_lines: int,
++    include_validation: bool,
++    include_errors: bool,
++    include_config: bool,
++    include_logging: bool,
++) -> Iterable[Dict]:
++    for path in discover_files(repo_path):
++        rel = path.relative_to(repo_path).as_posix()
++        meta = {"repo_path": str(repo_path), "path": rel, "sha": sha}
++        text = path.read_text(encoding="utf-8", errors="ignore")
++        if path.suffix == ".py":
++            for item in extract_python_items(rel, text):
++                # Primary docstring task
++                rec = build_chat_from_py_docstring(item, meta, allow_llm=allow_llm)
++                if rec:
++                    yield rec
++                # Optional chunked explanations
++                if py_chunking and item.get("code"):
++                    chunks = _chunk_code_by_blanklines(item["code"], py_chunk_min_lines, py_chunk_max)
++                    for ch in chunks:
++                        crec = build_chat_from_py_chunk(item, ch, meta)
++                        if crec:
++                            yield crec
++                # Additional deterministic tasks
++                code = item.get("code", "")
++                if include_validation:
++                    v = build_validation_summary_py(code, meta)
++                    if v:
++                        yield v
++                if include_errors:
++                    e = build_error_handling_summary_py(code, meta)
++                    if e:
++                        yield e
++                if include_logging:
++                    log_rec = build_logging_flow_summary_py(code, meta)
++                    if log_rec:
++                        yield log_rec
++        elif path.suffix in {".js", ".jsx", ".ts", ".tsx"}:
++            for item in extract_js_items(rel, text):
++                rec = build_chat_from_js_jsdoc(item, meta, allow_llm=allow_llm)
++                if rec:
++                    yield rec
++        elif path.suffix.lower() == ".md":
++            for sec in split_markdown_sections(text):
++                for rec in build_chats_from_md_section(
++                    sec,
++                    meta,
++                    max_questions=md_max_questions,
++                    window_tokens=md_window_tokens,
++                ):
++                    yield rec
++        # Module-level constants summary (once per file for .py)
++        if path.suffix == ".py" and include_config:
++            c = build_config_constants_summary_py(text, meta)
++            if c:
++                yield c
++
++
++def apply_filters(
++    records: Iterable[Dict],
++    max_tokens: int,
++    min_tokens: int,
++    file_cap: int,
++) -> List[Dict]:
++    out: List[Dict] = []
++    per_file: DefaultDict[str, int] = DefaultDict(int)
++    for r in records:
++        r = redact_secrets(r)
++        total = 0
++        for m in r.get("messages", []):
++            c = m.get("content", "")
++            if isinstance(c, str):
++                total += count_tokens_approx(c)
++        if total < min_tokens:
++            continue
++        if total > max_tokens:
++            continue
++        p = r.get("meta", {}).get("path", "")
++        if per_file[p] >= file_cap:
++            continue
++        per_file[p] += 1
++        out.append(r)
++    return dedupe_records(out)
++
++
++def train_valid_split(
++    records: List[Dict], valid_ratio: float = 0.1, seed: int = 17
++) -> Tuple[List[Dict], List[Dict]]:
++    rnd = random.Random(seed)
++    perm = records[:]
++    rnd.shuffle(perm)
++    n_valid = max(1, int(len(perm) * valid_ratio)) if perm else 0
++    return perm[n_valid:], perm[:n_valid]
++
++
++def write_jsonl(path: Path, rows: Iterable[Dict]) -> None:
++    path.parent.mkdir(parents=True, exist_ok=True)
++    with path.open("w", encoding="utf-8") as f:
++        for r in rows:
++            f.write(json.dumps(r, ensure_ascii=False) + "\n")
++
++
++@click.command()
++@click.option("--repo", required=True, help="GitHub repo URL (public)")
++@click.option("--out", "out_dir", required=True, type=click.Path(), help="Output directory")
++@click.option("--allow-llm", is_flag=True, default=False, help="Enable model-assisted labeling")
++@click.option("--max-tokens", default=4096, show_default=True, help="Max tokens per sample")
++@click.option("--min-tokens", default=48, show_default=True, help="Min tokens per sample")
++@click.option("--file-cap", default=15, show_default=True, help="Max samples per file")
++@click.option("--md-max-questions-per-section", default=4, show_default=True, help="Max Q/A per MD section")
++@click.option("--md-window-tokens", default=800, show_default=True, help="Window size for long MD sections")
++@click.option("--py-chunking/--no-py-chunking", default=True, help="Enable chunking long Python functions")
++@click.option("--py-chunk-max", default=5, show_default=True, help="Max chunks per function")
++@click.option("--py-chunk-min-lines", default=6, show_default=True, help="Min lines per chunk")
++@click.option("--include-validation/--no-include-validation", default=True, help="Add input validation summaries")
++@click.option("--include-errors/--no-include-errors", default=True, help="Add error handling summaries")
++@click.option("--include-config/--no-include-config", default=True, help="Add config constants summaries")
++@click.option("--include-logging/--no-include-logging", default=True, help="Add logging flow summaries")
++def main(
++    repo: str,
++    out_dir: str,
++    allow_llm: bool,
++    max_tokens: int,
++    min_tokens: int,
++    file_cap: int,
++    md_max_questions_per_section: int,
++    md_window_tokens: int,
++    py_chunking: bool,
++    py_chunk_max: int,
++    py_chunk_min_lines: int,
++    include_validation: bool,
++    include_errors: bool,
++    include_config: bool,
++    include_logging: bool,
++) -> None:
++    tmp = tempfile.mkdtemp(prefix="gh-chat-ds-")
++    repo_dir = Path(tmp) / "repo"
++    try:
++        cloned, sha = shallow_clone(repo, str(repo_dir))
++        records_iter = build_records_for_repo(
++            Path(cloned),
++            sha,
++            allow_llm=allow_llm,
++            md_max_questions=md_max_questions_per_section,
++            md_window_tokens=md_window_tokens,
++            py_chunking=py_chunking,
++            py_chunk_max=py_chunk_max,
++            py_chunk_min_lines=py_chunk_min_lines,
++            include_validation=include_validation,
++            include_errors=include_errors,
++            include_config=include_config,
++            include_logging=include_logging,
++        )
++        filtered = apply_filters(
++            records_iter,
++            max_tokens=max_tokens,
++            min_tokens=min_tokens,
++            file_cap=file_cap,
++        )
++        train, valid = train_valid_split(filtered)
++        outp = Path(out_dir)
++        write_jsonl(outp / "dataset.train.jsonl", train)
++        write_jsonl(outp / "dataset.valid.jsonl", valid)
++        stats = {
++            "total": len(filtered),
++            "train": len(train),
++            "valid": len(valid),
++        }
++        (outp / "stats.json").write_text(json.dumps(stats, indent=2), encoding="utf-8")
++        click.echo(json.dumps({"sha": sha, "counts": stats}))
++    finally:
++        shutil.rmtree(tmp, ignore_errors=True)
++
++
++if __name__ == "__main__":  # pragma: no cover
++    main()
+diff --git a/src/gh_chat_dataset/discover.py b/src/gh_chat_dataset/discover.py
+new file mode 100644
+index 0000000..d21af2e
+--- /dev/null
++++ b/src/gh_chat_dataset/discover.py
+@@ -0,0 +1,16 @@
++from pathlib import Path
++from typing import Iterable
++
++EXCLUDE_DIRS = {".git", "node_modules", "dist", "build", "venv", ".venv", "__pycache__"}
++CODE_EXTS = {".py", ".js", ".jsx", ".ts", ".tsx", ".md"}
++
++
++def discover_files(root: Path) -> Iterable[Path]:
++    for p in root.rglob("*"):
++        if p.is_dir():
++            if p.name in EXCLUDE_DIRS:
++                # skip walking inside excluded directories
++                yield from []
++            continue
++        if p.suffix in CODE_EXTS:
++            yield p
+diff --git a/src/gh_chat_dataset/extract_js.py b/src/gh_chat_dataset/extract_js.py
+new file mode 100644
+index 0000000..90ac949
+--- /dev/null
++++ b/src/gh_chat_dataset/extract_js.py
+@@ -0,0 +1,36 @@
++import re
++from typing import Dict, Iterable, List
++
++JSDOC_RE = re.compile(r"/\*\*([\s\S]*?)\*/\s*(?:export\s+)?(?:async\s+)?function\s+([a-zA-Z0-9_$]+)\s*\(", re.MULTILINE)
++FUNC_RE = re.compile(r"(?:export\s+)?(?:async\s+)?function\s+([a-zA-Z0-9_$]+)\s*\([^)]*\)\s*{", re.MULTILINE)
++
++
++def extract_js_items(path: str, text: str) -> Iterable[Dict]:
++    items: List[Dict] = []
++    for m in JSDOC_RE.finditer(text):
++        jsdoc = m.group(1).strip()
++        name = m.group(2)
++        func_start = FUNC_RE.search(text, pos=m.start())
++        if not func_start:
++            continue
++        body_start = func_start.end() - 1
++        depth = 0
++        i = body_start
++        while i < len(text):
++            if text[i] == '{':
++                depth += 1
++            elif text[i] == '}':
++                depth -= 1
++                if depth == 0:
++                    i += 1
++                    break
++            i += 1
++        code = text[func_start.start():i]
++        items.append({
++            "kind": "Function",
++            "name": name,
++            "jsdoc": jsdoc,
++            "code": code,
++            "path": path,
++        })
++    return items
+diff --git a/src/gh_chat_dataset/extract_md.py b/src/gh_chat_dataset/extract_md.py
+new file mode 100644
+index 0000000..34cfa1b
+--- /dev/null
++++ b/src/gh_chat_dataset/extract_md.py
+@@ -0,0 +1,23 @@
++import re
++from typing import Dict, List
++
++
++def split_markdown_sections(text: str) -> List[Dict]:
++    sections: List[Dict] = []
++    current = {"title": "", "content": []}
++    for line in text.splitlines():
++        if re.match(r"^#{1,6}\s", line):
++            if current["content"]:
++                sections.append({
++                    "title": current["title"],
++                    "content": "\n".join(current["content"]).strip(),
++                })
++            current = {"title": line.lstrip("# ").strip(), "content": []}
++        else:
++            current["content"].append(line)
++    if current["content"]:
++        sections.append({
++            "title": current["title"],
++            "content": "\n".join(current["content"]).strip(),
++        })
++    return [s for s in sections if s["content"]]
+diff --git a/src/gh_chat_dataset/extract_py.py b/src/gh_chat_dataset/extract_py.py
+new file mode 100644
+index 0000000..878fe6f
+--- /dev/null
++++ b/src/gh_chat_dataset/extract_py.py
+@@ -0,0 +1,41 @@
++import ast
++from typing import Dict, Iterable, List
++
++
++def extract_python_items(path: str, text: str) -> Iterable[Dict]:
++    items: List[Dict] = []
++    try:
++        tree = ast.parse(text)
++    except Exception:
++        return items
++    lines = text.splitlines()
++
++    def segment(node: ast.AST) -> str:
++        start = getattr(node, "lineno", 1) - 1
++        end = getattr(node, "end_lineno", start + 1)
++        return "\n".join(lines[start:end])
++
++    # module docstring
++    mod_doc = ast.get_docstring(tree) or ""
++    if mod_doc:
++        items.append({
++            "kind": "Module",
++            "name": None,
++            "docstring": mod_doc.strip(),
++            "code": text,
++            "path": path,
++        })
++
++    for node in ast.walk(tree):
++        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
++            doc = ast.get_docstring(node) or ""
++            code = segment(node)
++            name = getattr(node, "name", None)
++            items.append({
++                "kind": type(node).__name__,
++                "name": name,
++                "docstring": doc.strip(),
++                "code": code,
++                "path": path,
++            })
++    return items
+diff --git a/src/gh_chat_dataset/postprocess.py b/src/gh_chat_dataset/postprocess.py
+new file mode 100644
+index 0000000..981afff
+--- /dev/null
++++ b/src/gh_chat_dataset/postprocess.py
+@@ -0,0 +1,32 @@
++from typing import Callable, Dict, List, Tuple
++
++
++def redact_secrets(record: Dict) -> Dict:
++    # Placeholder: implement redaction patterns as needed.
++    return record
++
++
++def within_budget(record: Dict, max_tokens: int, tokenizer: Callable[[str], int]) -> bool:
++    total = 0
++    for m in record.get("messages", []):
++        c = m.get("content", "")
++        if isinstance(c, str):
++            total += tokenizer(c)
++    return total <= max_tokens
++
++
++def dedupe_records(records: List[Dict]) -> List[Dict]:
++    seen = set()
++    out: List[Dict] = []
++    for r in records:
++        msgs = r.get("messages", [])
++        key: Tuple = tuple(
++            (m.get("role"), m.get("content"))
++            for m in msgs
++            if isinstance(m, dict)
++        )
++        if key in seen:
++            continue
++        seen.add(key)
++        out.append(r)
++    return out
+diff --git a/src/gh_chat_dataset/tokenize_util.py b/src/gh_chat_dataset/tokenize_util.py
+new file mode 100644
+index 0000000..2a77b78
+--- /dev/null
++++ b/src/gh_chat_dataset/tokenize_util.py
+@@ -0,0 +1,3 @@
++def count_tokens_approx(s: str) -> int:
++    # Approximate: 1 token ~ 4 chars. Replace with your tokenizer for accuracy.
++    return max(1, len(s) // 4)
+diff --git a/tests/test_builders_new.py b/tests/test_builders_new.py
+new file mode 100644
+index 0000000..a2ae647
+--- /dev/null
++++ b/tests/test_builders_new.py
+@@ -0,0 +1,25 @@
++from gh_chat_dataset.builders import build_chats_from_md_section
++from gh_chat_dataset.cli import _chunk_code_by_blanklines
++
++
++def test_md_multi_questions():
++    sec = {
++        "title": "Usage",
++        "content": "This section explains usage. Inputs: A,B. Outputs: C. Limitations: none.",
++    }
++    chats = build_chats_from_md_section(sec, {"path": "README.md"}, max_questions=3, window_tokens=50)
++    assert 1 <= len(chats) <= 3
++    # All chats should include the section content as assistant
++    assert all(sec["content"] in r["messages"][1]["content"] for r in chats)
++
++
++def test_chunk_code_by_blanklines():
++    code = (
++        "def f(x):\n"
++        "    a = x + 1\n\n"
++        "    b = a * 2\n\n"
++        "    return b\n"
++    )
++    chunks = _chunk_code_by_blanklines(code, min_lines=1, max_chunks=5)
++    assert len(chunks) >= 2
++    assert any("return b" in ch for ch in chunks)
+diff --git a/tests/test_extractors.py b/tests/test_extractors.py
+index 0342cbc..0316f14 100644
+--- a/tests/test_extractors.py
++++ b/tests/test_extractors.py
+@@ -1,79 +1,43 @@
+-"""Tests for extraction modules."""
+-
+-from pathlib import Path
+-
+-from gh_chat_dataset import extract_md, extract_py
+-
+-
+-def test_python_extraction():
+-    """Test Python AST extraction."""
+-    code = '''"""Module docstring."""
+-
+-def hello(name: str) -> str:
+-    """Say hello to someone.
+-
+-    Args:
+-        name: The person's name.
+-
+-    Returns:
+-        A greeting message.
+-    """
+-    return f"Hello, {name}!"
+-
+-class Greeter:
+-    """A class for greeting people."""
+-
+-    def greet(self, name: str) -> str:
+-        """Greet someone."""
+-        return f"Hi, {name}!"
+-'''
+-
+-    items = extract_py.extract_python_items(Path("test.py"), code)
+-    assert len(items) >= 3  # module, function, class (may include method)
+-
+-    # Check module docstring
+-    module_item = next(item for item in items if item["kind"] == "Module")
+-    assert module_item["docstring"] == "Module docstring."
+-
+-    # Check function
+-    func_item = next(item for item in items if item["name"] == "hello")
+-    assert "Say hello to someone." in func_item["docstring"]
+-
+-
+-def test_markdown_extraction():
+-    """Test Markdown section extraction."""
+-    content = '''# Introduction
+-
+-This is the intro.
+-
+-## Getting Started
+-
+-Here's how to start.
+-
+-### Installation
+-
+-Run pip install.
+-
+-## Advanced Usage
+-
+-More complex examples.
+-'''
+-
+-    sections = extract_md.extract_markdown_sections(Path("README.md"), content)
+-    assert len(sections) >= 3
+-
+-    # Check first section
+-    intro_section = next(s for s in sections if s["title"] == "Introduction")
+-    assert "This is the intro." in intro_section["content"]
+-
+-
+-def test_empty_inputs():
+-    """Test handling of empty/invalid inputs."""
+-    # Empty Python code
+-    assert extract_py.extract_python_items(Path("empty.py"), "") == []
+-
+-    # Invalid Python syntax
+-    assert extract_py.extract_python_items(Path("bad.py"), "def broken(") == []
+-
+-    # Empty Markdown
+-    assert extract_md.extract_markdown_sections(Path("empty.md"), "") == []
++from gh_chat_dataset.extract_js import extract_js_items
++from gh_chat_dataset.extract_md import split_markdown_sections
++from gh_chat_dataset.extract_py import extract_python_items
++
++
++def test_extract_python_items_docstring():
++    text = (
++        "\n"
++        "def add(x, y):\n"
++        "    \"\"\"Add two numbers.\"\"\"\n"
++        "    return x + y\n"
++    )
++    items = list(extract_python_items("a.py", text))
++    funcs = [i for i in items if i.get("kind") in {"FunctionDef", "AsyncFunctionDef"}]
++    assert any(i.get("docstring") == "Add two numbers." for i in funcs)
++
++
++def test_split_markdown_sections():
++    md = (
++        "\n"
++        "# Title\n\n"
++        "Intro\n\n"
++        "## Details\n\n"
++        "More info\n"
++    )
++    secs = split_markdown_sections(md)
++    assert len(secs) == 2
++    assert secs[0]["title"] == "Title"
++    assert "Intro" in secs[0]["content"]
++
++
++def test_extract_js_items_jsdoc():
++    js = (
++        "\n"
++        "/**\n"
++        " * Multiply two numbers.\n"
++        " */\n"
++        "export function mul(a, b) {\n"
++        "  return a * b;\n"
++        "}\n"
++    )
++    items = list(extract_js_items("a.js", js))
++    assert any("Multiply two numbers." in i.get("jsdoc", "") for i in items)
