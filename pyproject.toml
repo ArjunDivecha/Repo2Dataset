@@ -1,37 +1,35 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling>=1.18.0"]
 build-backend = "hatchling.build"
 
 [project]
 name = "gh-chat-dataset"
 version = "0.1.0"
-description = "Convert GitHub repos to Qwen chat JSONL for MLX fine-tuning"
-authors = [{name = "Arjun Divecha"}]
-license = {text = "MIT"}
+description = "One-shot tool to turn a GitHub repo (py/js + docs) into chat/messages JSONL for Qwen/MLX fine-tuning"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [{name = "Droid (Factory.ai)", email = "dev@factory.ai"}]
 dependencies = [
-    "click>=8.0.0",
-    "requests>=2.25.0",
-    "gitpython>=3.1.0",
+  "click>=8.1.7",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "ruff>=0.1.0",
-    "pytest>=7.0.0",
+  "pytest>=8.2.0",
+  "ruff>=0.6.9",
 ]
 
 [project.scripts]
 gh-chat-dataset = "gh_chat_dataset.cli:main"
 
 [tool.ruff]
-line-length = 88
-target-version = "py38"
+line-length = 120
+target-version = "py310"
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "N", "B", "S", "C4", "UP"]
-ignore = ["S101", "S603", "S607"]
+select = ["E", "F", "I"]
+ignore = []
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

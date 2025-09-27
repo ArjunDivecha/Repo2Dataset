@@ -3,7 +3,10 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+*.py[cod]
 .Python
+
+# Builds
 build/
 develop-eggs/
 dist/
@@ -26,11 +29,12 @@ venv/
 ENV/
 env/
 
-# IDE
+# IDE & OS
 .vscode/
 .idea/
 *.swp
 *.swo
+.DS_Store
 
 # Testing
 .pytest_cache/
