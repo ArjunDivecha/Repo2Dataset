@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling>=1.18.0"]
+requires = ["tree_sitter_language_pack>=0.13.0",]
 build-backend = "hatchling.build"
 
 [project]
@@ -12,6 +12,15 @@ license = {text = "MIT"}
 authors = [{name = "Droid (Factory.ai)", email = "dev@factory.ai"}]
 dependencies = [
   "click>=8.1.7",
+  "anthropic>=0.31.0",
+  "faiss-cpu>=1.8.0",
+  "hdbscan>=0.8.38",
+  "markdown-it-py>=3.0.0",
+  "numpy>=1.26.0",
+  "openai>=1.40.0",
+  "scikit-learn>=1.5.0",
+  "tree_sitter>=0.21.0",
+  "tree_sitter_language_pack>=0.13.0",
 ]
 
 [project.optional-dependencies]
