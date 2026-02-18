@@ -6,14 +6,14 @@
 
 ## 🎯 What Does This Do?
 
-This tool automatically extracts meaningful code-documentation pairs from GitHub repositories and formats them as conversation data that AI models can learn from. 
+This tool automatically extracts meaningful code-documentation pairs from GitHub repositories and formats them as conversation data that AI models can learn from.
 
 **Think of it as**: Taking a repository full of Python functions with docstrings, JavaScript with JSDoc comments, and README files, then converting them into "teacher-student" conversations for AI training.
 
 ### 🧠 The Magic Behind It
 
 - **Python Functions** → "Write a docstring for this function" conversations
-- **JavaScript/TypeScript** → "Add JSDoc comments to this code" examples  
+- **JavaScript/TypeScript** → "Add JSDoc comments to this code" examples
 - **Markdown Documentation** → "Explain this section" Q&A pairs
 - **Smart Processing** → Removes duplicates, filters by length, splits for training
 
@@ -30,6 +30,7 @@ pip install -e .[dev]
 ```
 
 ### Step 2: Convert a Repository
+
 ```bash
 # Example: Convert the popular 'requests' library into training data
 gh-chat-dataset --repo https://github.com/psf/requests.git --out ./requests_dataset
@@ -39,13 +40,58 @@ gh-chat-dataset --repo https://github.com/pallets/itsdangerous.git --out ./test_
 ```
 
 ### Step 3: Check Your Results
+
 ```bash
 ls test_dataset/
 # You'll see:
 # dataset.train.jsonl  <- 90% of samples for training
-# dataset.valid.jsonl  <- 10% of samples for validation  
+# dataset.valid.jsonl  <- 10% of samples for validation
 # stats.json          <- Summary of what was extracted
 ```
+
+## 📱 Calculator Demo
+
+This repository includes a robust web-based calculator application built with Flask that you can try out locally:
+
+### Running the Calculator
+
+```bash
+# Option 1: Using the installed command
+calculator-app
+
+# Option 2: Run directly with Flask
+cd src/calculator_app
+python -m flask run --host=0.0.0.0 --port=5000
+
+# Option 3: Run the app.py file directly
+python src/calculator_app/app.py
+```
+
+Then open your browser and navigate to:
+```
+http://localhost:5000
+```
+
+### Features
+
+- **Basic Operations**: Addition (+), Subtraction (−), Multiplication (×), Division (÷)
+- **Advanced Functions**: Percentage (%), Sign toggle (±), Backspace
+- **Keyboard Support**: Use keyboard keys for all operations
+- **Error Handling**: Handles division by zero and overflow errors gracefully
+- **Smart Display**: Shows expression history and current value
+- **Responsive Design**: Works beautifully on desktop and mobile
+
+### Keyboard Shortcuts
+
+| Key | Action |
+|-----|--------|
+| 0-9 | Enter number |
+| +, -, *, / | Operations |
+| Enter or = | Calculate result |
+| Escape or C | Clear calculator |
+| Backspace | Delete last digit |
+| . | Decimal point |
+| % | Percentage |
 
 ## 📊 Real Example Output
 
@@ -104,7 +150,7 @@ gh-chat-dataset --repo https://github.com/user/repo.git --out ./my_dataset --spl
 
 ### From Python Files (.py)
 - ✅ Functions with docstrings → "Write docstring" examples
-- ✅ Classes with docstrings → "Document this class" examples  
+- ✅ Classes with docstrings → "Document this class" examples
 - ✅ Module docstrings → "Summarize this module" examples
 
 ### From JavaScript/TypeScript (.js, .jsx, .ts, .tsx)
@@ -149,7 +195,7 @@ After running the tool, check `stats.json`:
 - `sindresorhus/is` - Simple JavaScript utilities with good docs
 - `getsentry/sentry-python` - Medium-sized Python project
 
-### For Larger Datasets  
+### For Larger Datasets
 - `psf/requests` - Popular Python HTTP library
 - `microsoft/TypeScript` - Large TypeScript codebase
 - `django/django` - Web framework with extensive docs
@@ -195,7 +241,7 @@ print(sample['meta'])      # Metadata about source
 - ✅ For private repos, ensure your Git credentials are set up
 - ✅ Try with a public repository first
 
-### "Out of memory" errors  
+### "Out of memory" errors
 - ✅ Use `--max-tokens 1024` for smaller samples
 - ✅ Try processing smaller repositories first
 - ✅ Make sure you have sufficient disk space
@@ -212,7 +258,7 @@ print(sample['meta'])      # Metadata about source
 # Create a script to process multiple repositories
 repos=(
   "https://github.com/user/repo1.git"
-  "https://github.com/user/repo2.git" 
+  "https://github.com/user/repo2.git"
   "https://github.com/user/repo3.git"
 )
 

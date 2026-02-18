@@ -21,6 +21,7 @@ dependencies = [
   "scikit-learn>=1.5.0",
   "tree_sitter>=0.21.0",
   "tree_sitter_language_pack>=0.13.0",
+  "flask>=3.0.0",
 ]
 
 [project.optional-dependencies]
@@ -31,13 +32,15 @@ dev = [
 
 [project.scripts]
 gh-chat-dataset = "gh_chat_dataset.cli:main"
+calculator-app = "calculator_app.app:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/gh_chat_dataset"]
+packages = ["src/gh_chat_dataset", "src/calculator_app"]
 
 [tool.hatch.build.targets.sdist]
 include = [
   "src/gh_chat_dataset",
+  "src/calculator_app",
   "README.md",
   "pyproject.toml",
   "LICENSE",

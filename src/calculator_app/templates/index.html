@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Calculator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Web Calculator</h1>
+        <div class="calculator">
+            <div class="display">
+                <div class="display-expression" id="expression"></div>
+                <div class="display-input" id="display">0</div>
+            </div>
+            
+            <div class="keypad">
+                <button class="btn btn-op" data-action="clear" data-value="C">C</button>
+                <button class="btn btn-op" data-action="toggle_sign">±</button>
+                <button class="btn btn-op" data-action="percentage">%</button>
+                <button class="btn btn-op" data-action="op" data-value="/">÷</button>
+                
+                <button class="btn btn-num" data-action="digit" data-value="7">7</button>
+                <button class="btn btn-num" data-action="digit" data-value="8">8</button>
+                <button class="btn btn-num" data-action="digit" data-value="9">9</button>
+                <button class="btn btn-op" data-action="op" data-value="*">×</button>
+                
+                <button class="btn btn-num" data-action="digit" data-value="4">4</button>
+                <button class="btn btn-num" data-action="digit" data-value="5">5</button>
+                <button class="btn btn-num" data-action="digit" data-value="6">6</button>
+                <button class="btn btn-op" data-action="op" data-value="-">−</button>
+                
+                <button class="btn btn-num" data-action="digit" data-value="1">1</button>
+                <button class="btn btn-num" data-action="digit" data-value="2">2</button>
+                <button class="btn btn-num" data-action="digit" data-value="3">3</button>
+                <button class="btn btn-op" data-action="op" data-value="+">+</button>
+                
+                <button class="btn btn-num btn-zero" data-action="digit" data-value="0">0</button>
+                <button class="btn btn-num" data-action="dot">.</button>
+                <button class="btn btn-equals" data-action="equals">=</button>
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <h3>Keyboard Shortcuts:</h3>
+            <ul>
+                <li><strong>0-9, +, -, /, *</strong> - Numbers and operations</li>
+                <li><strong>Enter or =</strong> - Calculate result</li>
+                <li><strong>Escape or C</strong> - Clear calculator</li>
+                <li><strong>Backspace</strong> - Delete last digit</li>
+                <li><strong>.</strong> - Decimal point</li>
+                <li><strong>%</strong> - Percentage</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Calculator state management
+        const CalculatorApp = {
+            async sendAction(action, value = null) {
+                try {
+                    const payload = { action };
+                    if (value !== null) {
+                        payload.value = value;
+                    }
+                    
+                    const response = await fetch('/api/calculate', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(payload),
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('API request failed');
+                    }
+                    
+                    const data = await response.json();
+                    this.updateDisplay(data);
+                } catch (error) {
+                    console.error('Error:', error);
+                    displayInput.textContent = 'Error';
+                }
+            },
+            
+            updateDisplay(data) {
+                const displayInput = document.getElementById('display');
+                const displayExpression = document.getElementById('expression');
+                
+                displayInput.textContent = data.current_input || '0';
+                displayExpression.textContent = data.display_expression || '';
+                
+                // Handle error state
+                if (data.error) {
+                    displayInput.classList.add('error');
+                } else {
+                    displayInput.classList.remove('error');
+                }
+            },
+            
+            async reset() {
+                try {
+                    const response = await fetch('/api/reset', {
+                        method: 'POST',
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('Reset failed');
+                    }
+                    
+                    const data = await response.json();
+                    this.updateDisplay(data);
+                } catch (error) {
+                    console.error('Error:', error);
+                }
+            }
+        };
+        
+        // Button click handlers
+        document.querySelectorAll('.btn').forEach(button => {
+            button.addEventListener('click', async () => {
+                const action = button.dataset.action;
+                const value = button.dataset.value;
+                
+                // Add visual feedback
+                button.classList.add('active');
+                setTimeout(() => button.classList.remove('active'), 100);
+                
+                if (action === 'clear') {
+                    await CalculatorApp.reset();
+                } else {
+                    await CalculatorApp.sendAction(action, value);
+                }
+            });
+        });
+        
+        // Keyboard support
+        document.addEventListener('keydown', async (event) => {
+            const key = event.key;
+            
+            // Prevent default for calculator keys
+            if (/^[0-9\+\-\*\/\.=%\n\r]$/.test(key) || 
+                key === 'Enter' || 
+                key === 'Escape' || 
+                key === 'Backspace') {
+                event.preventDefault();
+            }
+            
+            // Handle different key types
+            if (/[0-9]/.test(key)) {
+                CalculatorApp.sendAction('digit', key);
+                highlightButton(`[data-action="digit"][data-value="${key}"]`);
+            } else if (key === '.') {
+                CalculatorApp.sendAction('dot');
+                highlightButton('[data-action="dot"]');
+            } else if (['+', '-', '*', '/'].includes(key)) {
+                CalculatorApp.sendAction('op', key);
+                highlightButton(`[data-action="op"][data-value="${key}"]`);
+            } else if (key === 'Enter' || key === '=') {
+                CalculatorApp.sendAction('equals');
+                highlightButton('[data-action="equals"]');
+            } else if (key === 'Escape' || key.toLowerCase() === 'c') {
+                CalculatorApp.reset();
+                highlightButton('[data-action="clear"]');
+            } else if (key === 'Backspace') {
+                CalculatorApp.sendAction('backspace');
+                highlightButton('[data-action="backspace"]');
+            } else if (key === '%') {
+                CalculatorApp.sendAction('percentage');
+                highlightButton('[data-action="percentage"]');
+            }
+        });
+        
+        function highlightButton(selector) {
+            const button = document.querySelector(selector);
+            if (button) {
+                button.classList.add('active');
+                setTimeout(() => button.classList.remove('active'), 150);
+            }
+        }
+    </script>
+</body>
+</html>
