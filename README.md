@@ -4,6 +4,8 @@
 
 > 💡 **Perfect for**: Training coding assistants, documentation bots, or domain-specific AI models from real codebases.
 
+**NEW**: Now includes a web-based UI for easy dataset generation! 🌐
+
 ## 🎯 What Does This Do?
 
 This tool automatically extracts meaningful code-documentation pairs from GitHub repositories and formats them as conversation data that AI models can learn from.
@@ -92,6 +94,95 @@ http://localhost:5000
 | Backspace | Delete last digit |
 | . | Decimal point |
 | % | Percentage |
+
+## 🌐 Web UI
+
+This repository also includes a **full-featured web-based front-end** for generating datasets through a user-friendly interface. Perfect if you prefer a visual UI over the command line!
+
+### Running the Web Application
+
+```bash
+# Ensure dependencies are installed
+pip install -e .[web]
+
+# Start the web server
+gh-chat-dataset-web --port 5001
+
+# With custom output directory
+gh-chat-dataset-web --port 5001 --output-root ./my_outputs
+```
+
+Then open your browser and navigate to:
+```
+http://localhost:5001
+```
+
+### Web UI Features
+
+- **Interactive Form**: Easy-to-use interface for all configurations
+- **Real-time Progress**: Live status updates and progress bar
+- **Live Logs**: View detailed logs as your dataset is being generated
+- **Download Links**: One-click downloads for all output files
+- **Advanced Options**: Full parity with CLI options for fine-tuning control
+- **Job Management**: Run multiple jobs and track their status
+
+### Configuration Options
+
+The web UI supports all the same options as the CLI:
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| **GitHub Repository URL** | The repository to process (required) | - |
+| **Output Name** | Custom name for output directory | Auto-generated |
+| **Enable LLM-assisted labeling** | Use AI to generate labels (experimental) | OFF |
+| **Max Tokens** | Maximum tokens per sample | 4096 |
+| **Min Tokens** | Minimum tokens per sample | 48 |
+| **Max Samples per File** | Limit samples per source file | 15 |
+| **Max Questions/Section** | Q&A pairs per Markdown section | 4 |
+| **Window Tokens** | Context window for Markdown processing | 800 |
+| **Enable Python Chunking** | Split long Python functions | ON |
+| **Max Chunks** | Maximum chunks per function | 5 |
+| **Min Lines/Chunk** | Minimum lines per chunk | 6 |
+| **Included Summaries** | Validation, Errors, Config, Logging | All ON |
+
+### Using the Web UI
+
+1. **Enter Repository URL**: Paste a GitHub repository URL (e.g., `https://github.com/psf/requests.git`)
+
+2. **Configure Options**:
+   - Leave defaults for quick start
+   - Expand "Advanced Options" for fine-tuning
+
+3. **Click "Start Generation"**:
+   - Watch real-time progress updates
+   - View detailed logs in the logs panel
+
+4. **Download Results**:
+   - When complete, see sample counts and statistics
+   - Download `dataset.train.jsonl`, `dataset.valid.jsonl`, and `stats.json`
+
+### Output Files
+
+Files are saved to the configured output directory (default: `./outputs/`):
+```
+outputs/
+└── repo_name_20240101_143022/
+    ├── dataset.train.jsonl   # Training samples (90%)
+    ├── dataset.valid.jsonl   # Validation samples (10%)
+    └── stats.json            # Summary statistics
+```
+
+### Production Deployment
+
+For production use, you can serve the web app with a production WSGI server:
+
+```bash
+# Using gunicorn (install with: pip install gunicorn)
+gunicorn -w 4 -b 0.0.0.0:5001 gh_chat_dataset.webapp.server:app
+
+# With custom settings
+REPO2DATASET_OUTPUT_ROOT=/data/datasets gunicorn -w 4 -b 0.0.0.0:5001 gh_chat_dataset.webapp.server:app
+```
 
 ## 📊 Real Example Output
 

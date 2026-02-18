@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Repo2Dataset - GitHub Repo to Training Data</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🤖 Repo2Dataset</h1>
+            <p>Convert GitHub repositories into AI training data</p>
+        </header>
+
+        <div class="main-content">
+            <aside class="config-panel">
+                <h2>Configuration</h2>
+
+                <div class="form-group">
+                    <label for="repo_url">GitHub Repository URL *</label>
+                    <input
+                        type="url"
+                        id="repo_url"
+                        placeholder="https://github.com/user/repo.git"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="output_name">Output Name (optional)</label>
+                    <input
+                        type="text"
+                        id="output_name"
+                        placeholder="my-dataset"
+                    >
+                    <small>Default: &lt;repo_name&gt;_&lt;timestamp&gt;</small>
+                </div>
+
+                <details class="advanced-options" open>
+                    <summary>Advanced Options</summary>
+
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="allow_llm">
+                            Enable LLM-assisted labeling (experimental)
+                        </label>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="max_tokens">Max Tokens</label>
+                            <input type="number" id="max_tokens" value="4096" min="128">
+                        </div>
+                        <div class="form-group">
+                            <label for="min_tokens">Min Tokens</label>
+                            <input type="number" id="min_tokens" value="48" min="1">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="file_cap">Max Samples per File</label>
+                        <input type="number" id="file_cap" value="15" min="1" max="100">
+                    </div>
+
+                    <h3>Markdown Processing</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="md_max_questions">Max Questions/Section</label>
+                            <input type="number" id="md_max_questions" value="4" min="1" max="20">
+                        </div>
+                        <div class="form-group">
+                            <label for="md_window_tokens">Window Tokens</label>
+                            <input type="number" id="md_window_tokens" value="800" min="100">
+                        </div>
+                    </div>
+
+                    <h3>Python Processing</h3>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="py_chunking" checked>
+                            Enable Python Chunking
+                        </label>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="py_chunk_max">Max Chunks</label>
+                            <input type="number" id="py_chunk_max" value="5" min="1" max="20">
+                        </div>
+                        <div class="form-group">
+                            <label for="py_chunk_min_lines">Min Lines/Chunk</label>
+                            <input type="number" id="py_chunk_min_lines" value="6" min="1">
+                        </div>
+                    </div>
+
+                    <h3>Included Summaries</h3>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" id="include_validation" checked> Validation</label>
+                        <label><input type="checkbox" id="include_errors" checked> Error Handling</label>
+                        <label><input type="checkbox" id="include_config" checked> Config Constants</label>
+                        <label><input type="checkbox" id="include_logging" checked> Logging Flow</label>
+                    </div>
+                </details>
+
+                <button id="start_btn" class="btn primary">Start Generation</button>
+                <button id="reset_btn" class="btn secondary" style="display: none;">New Job</button>
+            </aside>
+
+            <main class="status-panel">
+                <h2>Job Status</h2>
+
+                <div id="status_container" class="status-container">
+                    <div class="status-message">
+                        <p>Configure your repository and click "Start Generation" to begin.</p>
+                    </div>
+                </div>
+
+                <div id="progress_section" style="display: none;">
+                    <div class="progress-header">
+                        <span id="status_text">Queued</span>
+                        <span id="progress_percent">0%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div id="progress_fill" class="progress-fill"></div>
+                    </div>
+                </div>
+
+                <div id="logs_section" class="logs-section">
+                    <div class="logs-header">
+                        <h3>Logs</h3>
+                        <button id="copy_logs_btn" class="btn small">Copy Logs</button>
+                    </div>
+                    <div id="logs_container" class="logs-container">
+                        <pre id="logs_output"></pre>
+                    </div>
+                </div>
+
+                <div id="results_section" class="results-section" style="display: none;">
+                    <h3>Results</h3>
+                    <div class="stats">
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat_total">0</div>
+                            <div class="stat-label">Total Samples</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat_train">0</div>
+                            <div class="stat-label">Training</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat_valid">0</div>
+                            <div class="stat-label">Validation</div>
+                        </div>
+                    </div>
+
+                    <div class="file-info">
+                        <strong>SHA:</strong> <span id="repo_sha">-</span><br>
+                        <strong>Output Directory:</strong> <span id="output_dir">-</span>
+                    </div>
+
+                    <h4>Download Files</h4>
+                    <div class="download-buttons">
+                        <button id="download_train" class="btn success">
+                            📥 dataset.train.jsonl
+                        </button>
+                        <button id="download_valid" class="btn success">
+                            📥 dataset.valid.jsonl
+                        </button>
+                        <button id="download_stats" class="btn success">
+                            📥 stats.json
+                        </button>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <footer>
+            <p>Built with ❤️ for AI training data generation</p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

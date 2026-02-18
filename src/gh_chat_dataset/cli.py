@@ -4,7 +4,7 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import DefaultDict, Dict, Iterable, List, Optional, Tuple
+from typing import Callable, DefaultDict, Dict, Iterable, List, Optional, Tuple
 
 import click
 
@@ -176,6 +176,117 @@ def write_jsonl(path: Path, rows: Iterable[Dict]) -> None:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
 
 
+def generate_dataset(
+    repo: str,
+    out_dir: str,
+    allow_llm: bool,
+    max_tokens: int,
+    min_tokens: int,
+    file_cap: int,
+    md_max_questions_per_section: int,
+    md_window_tokens: int,
+    py_chunking: bool,
+    py_chunk_max: int,
+    py_chunk_min_lines: int,
+    include_validation: bool,
+    include_errors: bool,
+    include_config: bool,
+    include_logging: bool,
+    progress_cb: Optional[Callable[[str, int], None]] = None,
+) -> Dict:
+    """
+    Generate a dataset from a GitHub repository.
+
+    Args:
+        repo: GitHub repo URL
+        out_dir: Output directory path
+        allow_llm: Enable model-assisted labeling
+        max_tokens: Maximum tokens per sample
+        min_tokens: Minimum tokens per sample
+        file_cap: Maximum samples per file
+        md_max_questions_per_section: Max Q/A per MD section
+        md_window_tokens: Window size for MD sections
+        py_chunking: Enable Python chunking
+        py_chunk_max: Max chunks per function
+        py_chunk_min_lines: Min lines per chunk
+        include_validation: Include validation summaries
+        include_errors: Include error handling summaries
+        include_config: Include config summaries
+        include_logging: Include logging summaries
+        progress_cb: Optional callback(message, progress_percent)
+
+    Returns:
+        Dict with 'sha' and 'counts' keys
+    """
+    if progress_cb:
+        progress_cb("Starting dataset generation...", 0)
+
+    tmp = tempfile.mkdtemp(prefix="gh-chat-ds-")
+    repo_dir = Path(tmp) / "repo"
+    try:
+        if progress_cb:
+            progress_cb(f"Cloning repository: {repo}", 5)
+
+        cloned, sha = shallow_clone(repo, str(repo_dir))
+
+        if progress_cb:
+            progress_cb(f"Cloned successfully (SHA: {sha[:8]})", 10)
+
+        if progress_cb:
+            progress_cb("Building records from repository...", 20)
+
+        records_iter = build_records_for_repo(
+            Path(cloned),
+            sha,
+            allow_llm=allow_llm,
+            md_max_questions=md_max_questions_per_section,
+            md_window_tokens=md_window_tokens,
+            py_chunking=py_chunking,
+            py_chunk_max=py_chunk_max,
+            py_chunk_min_lines=py_chunk_min_lines,
+            include_validation=include_validation,
+            include_errors=include_errors,
+            include_config=include_config,
+            include_logging=include_logging,
+        )
+
+        if progress_cb:
+            progress_cb("Filtering records...", 60)
+
+        filtered = apply_filters(
+            records_iter,
+            max_tokens=max_tokens,
+            min_tokens=min_tokens,
+            file_cap=file_cap,
+        )
+
+        if progress_cb:
+            progress_cb(f"Found {len(filtered)} records. Splitting train/valid...", 70)
+
+        train, valid = train_valid_split(filtered)
+
+        if progress_cb:
+            progress_cb(f"Writing output files ({len(train)} train, {len(valid)} valid)...", 90)
+
+        outp = Path(out_dir)
+        write_jsonl(outp / "dataset.train.jsonl", train)
+        write_jsonl(outp / "dataset.valid.jsonl", valid)
+
+        stats = {
+            "total": len(filtered),
+            "train": len(train),
+            "valid": len(valid),
+        }
+        (outp / "stats.json").write_text(json.dumps(stats, indent=2), encoding="utf-8")
+
+        if progress_cb:
+            progress_cb("Dataset generation complete!", 100)
+
+        return {"sha": sha, "counts": stats}
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 @click.command()
 @click.option("--repo", required=True, help="GitHub repo URL (public)")
 @click.option("--out", "out_dir", required=True, type=click.Path(), help="Output directory")
@@ -209,43 +320,25 @@ def main(
     include_config: bool,
     include_logging: bool,
 ) -> None:
-    tmp = tempfile.mkdtemp(prefix="gh-chat-ds-")
-    repo_dir = Path(tmp) / "repo"
-    try:
-        cloned, sha = shallow_clone(repo, str(repo_dir))
-        records_iter = build_records_for_repo(
-            Path(cloned),
-            sha,
-            allow_llm=allow_llm,
-            md_max_questions=md_max_questions_per_section,
-            md_window_tokens=md_window_tokens,
-            py_chunking=py_chunking,
-            py_chunk_max=py_chunk_max,
-            py_chunk_min_lines=py_chunk_min_lines,
-            include_validation=include_validation,
-            include_errors=include_errors,
-            include_config=include_config,
-            include_logging=include_logging,
-        )
-        filtered = apply_filters(
-            records_iter,
-            max_tokens=max_tokens,
-            min_tokens=min_tokens,
-            file_cap=file_cap,
-        )
-        train, valid = train_valid_split(filtered)
-        outp = Path(out_dir)
-        write_jsonl(outp / "dataset.train.jsonl", train)
-        write_jsonl(outp / "dataset.valid.jsonl", valid)
-        stats = {
-            "total": len(filtered),
-            "train": len(train),
-            "valid": len(valid),
-        }
-        (outp / "stats.json").write_text(json.dumps(stats, indent=2), encoding="utf-8")
-        click.echo(json.dumps({"sha": sha, "counts": stats}))
-    finally:
-        shutil.rmtree(tmp, ignore_errors=True)
+    result = generate_dataset(
+        repo=repo,
+        out_dir=out_dir,
+        allow_llm=allow_llm,
+        max_tokens=max_tokens,
+        min_tokens=min_tokens,
+        file_cap=file_cap,
+        md_max_questions_per_section=md_max_questions_per_section,
+        md_window_tokens=md_window_tokens,
+        py_chunking=py_chunking,
+        py_chunk_max=py_chunk_max,
+        py_chunk_min_lines=py_chunk_min_lines,
+        include_validation=include_validation,
+        include_errors=include_errors,
+        include_config=include_config,
+        include_logging=include_logging,
+        progress_cb=lambda msg, pct: None,  # No progress callback for CLI
+    )
+    click.echo(json.dumps(result))
 
 
 if __name__ == "__main__":  # pragma: no cover

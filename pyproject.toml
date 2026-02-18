@@ -29,17 +29,22 @@ dev = [
   "pytest>=8.2.0",
   "ruff>=0.6.9",
 ]
+web = [
+  "flask-cors>=4.0.0",
+]
 
 [project.scripts]
 gh-chat-dataset = "gh_chat_dataset.cli:main"
+gh-chat-dataset-web = "gh_chat_dataset.webapp.server:main"
 calculator-app = "calculator_app.app:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/gh_chat_dataset", "src/calculator_app"]
+packages = ["src/gh_chat_dataset", "src/gh_chat_dataset/webapp", "src/calculator_app"]
 
 [tool.hatch.build.targets.sdist]
 include = [
   "src/gh_chat_dataset",
+  "src/gh_chat_dataset/webapp",
   "src/calculator_app",
   "README.md",
   "pyproject.toml",
