@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Output Directory - {{ job_id }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        .browse-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .browse-header {
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #eee;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 1rem;
+            color: #0066cc;
+            text-decoration: none;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        .file-list {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1.5rem;
+        }
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .file-item:last-child {
+            border-bottom: none;
+        }
+        .file-name {
+            font-family: 'Courier New', monospace;
+            font-weight: 500;
+        }
+        .file-link {
+            color: #0066cc;
+            text-decoration: none;
+        }
+        .file-link:hover {
+            text-decoration: underline;
+        }
+        .path-info {
+            background: #fff3cd;
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+        }
+        .path-info code {
+            background: #fff;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="browse-container">
+        <div class="browse-header">
+            <a href="/" class="back-link">← Back to Dataset Generator</a>
+            <h1>📁 Output Directory</h1>
+            <p>Job ID: <code>{{ job_id }}</code></p>
+        </div>
+
+        <div class="path-info">
+            <strong>Output Directory:</strong> <code>{{ output_dir_path }}</code>
+        </div>
+
+        <div class="file-list">
+            <h2>Files</h2>
+            {% if files %}
+            {% for file in files %}
+            <div class="file-item">
+                <span class="file-name">{{ file.name }}</span>
+                <a href="{{ file.download_url }}" class="file-link">Download</a>
+            </div>
+            {% endfor %}
+            {% else %}
+            <p style="color: #666; padding: 1rem 0;">No files found in this directory.</p>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>
