@@ -6,6 +6,8 @@ Serves the web interface and provides API endpoints for dataset generation.
 
 import json
 import os
+import platform
+import subprocess
 from datetime import datetime
 from pathlib import Path
 from typing import Dict
@@ -185,6 +187,65 @@ def download_job_file(job_id: str, file_name: str):
         download_name=actual_file,
         mimetype="application/json",
     )
+
+
+@app.route("/api/jobs/<job_id>/open-output", methods=["POST"])
+def open_job_output(job_id: str):
+    """
+    Open the output directory in the OS file manager.
+
+    This endpoint triggers the OS file manager to open the output directory
+    on the machine running the Flask server (not the client machine).
+
+    Returns:
+        {"ok": true, "output_dir": "..."} on success
+        {"error": "..."} on failure
+    """
+    from .jobs import get_job
+    from .services import validate_output_path
+
+    job = get_job(job_id)
+
+    if not job:
+        return jsonify({"error": "Job not found"}), 404
+
+    if job["state"] != "done":
+        return jsonify({"error": "Job not completed"}), 400
+
+    output_dir = Path(job["result"]["output_dir"])
+
+    # Validate path safety - ensure the output directory is within OUTPUT_ROOT
+    if not validate_output_path(str(output_dir), OUTPUT_ROOT):
+        return jsonify({"error": "Invalid output directory"}), 403
+
+    # Check if directory exists
+    if not output_dir.exists():
+        return jsonify({"error": "Output directory not found", "output_dir": str(output_dir)}), 404
+
+    # Open directory using OS-specific commands
+    try:
+        system = platform.system()
+        if system == "Darwin":  # macOS
+            subprocess.Popen(["open", str(output_dir)])
+        elif system == "Windows":
+            subprocess.Popen(["explorer", str(output_dir)])
+        elif system == "Linux":
+            # Try xdg-open, which is the standard way to open files/folders on Linux
+            subprocess.Popen(["xdg-open", str(output_dir)])
+        else:
+            return jsonify({"error": "Unsupported operating system", "output_dir": str(output_dir)}), 400
+
+        import logging
+        logging.info(f"Opened output directory in file manager: {output_dir}")
+
+        return jsonify({"ok": True, "output_dir": str(output_dir)})
+    except Exception as e:
+        # Return the path so the user can copy it as a fallback
+        return jsonify({
+            "error": f"Failed to open folder: {str(e)}",
+            "output_dir": str(output_dir),
+            "copy_fallback": True
+        }), 500
 
 
 @app.route("/jobs/<job_id>/output/", methods=["GET"])
