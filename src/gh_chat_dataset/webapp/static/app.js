@@ -144,9 +144,15 @@ class DatasetGenerator {
 
             if (result.output_dir) {
                 outputDirLink.textContent = result.output_dir;
-                outputDirLink.href = `/jobs/${this.currentJobId}/output/`;
+                outputDirLink.href = '#';
                 outputDirLink.style.display = 'inline';
                 outputDirSpan.style.display = 'none';
+
+                // Add click handler to open folder in OS file manager
+                outputDirLink.onclick = async (e) => {
+                    e.preventDefault();
+                    await this.openOutputFolder(result.output_dir);
+                };
             } else {
                 outputDirSpan.textContent = '-';
                 outputDirLink.style.display = 'none';
@@ -281,6 +287,59 @@ class DatasetGenerator {
 
         // Clear form inputs (except repo URL for convenience)
         this.outputNameInput.value = '';
+    }
+
+    async openOutputFolder(outputDir) {
+        try {
+            const response = await fetch(`/api/jobs/${this.currentJobId}/open-output`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.ok) {
+                // Success - folder opened, show temporary success message
+                const originalContent = this.statusContainer.innerHTML;
+                this.statusContainer.innerHTML = `
+                    <div class="status-message" style="color: var(--success);">
+                        <p>✓ Folder opened in file manager</p>
+                    </div>
+                `;
+                setTimeout(() => {
+                    this.statusContainer.innerHTML = `
+                        <div class="status-message">
+                            <p>Job ID: <code>${this.currentJobId}</code></p>
+                        </div>
+                    `;
+                }, 3000);
+            } else {
+                // Error occurred - offer to copy path as fallback
+                const errorMsg = data.error || 'Failed to open folder';
+                this.showError(errorMsg);
+                const shouldCopy = confirm(`${errorMsg}\n\nWould you like to copy the path to your clipboard instead?`);
+                if (shouldCopy) {
+                    navigator.clipboard.writeText(data.output_dir || outputDir).then(() => {
+                        alert('Path copied to clipboard!');
+                    }).catch(err => {
+                        alert(`Failed to copy path: ${err.message}`);
+                    });
+                }
+            }
+        } catch (error) {
+            this.showError('Failed to open folder: ' + error.message);
+            // Offer to copy path on network errors
+            const shouldCopy = confirm(`Network error: ${error.message}\n\nWould you like to copy the path to your clipboard instead?`);
+            if (shouldCopy) {
+                navigator.clipboard.writeText(outputDir).then(() => {
+                    alert('Path copied to clipboard!');
+                }).catch(err => {
+                    alert(`Failed to copy path: ${err.message}`);
+                });
+            }
+        }
     }
 
     getOptions() {
