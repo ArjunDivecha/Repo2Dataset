@@ -138,7 +138,20 @@ class DatasetGenerator {
             document.getElementById('stat_valid').textContent = result.counts.valid || 0;
 
             document.getElementById('repo_sha').textContent = result.sha || '-';
-            document.getElementById('output_dir').textContent = result.output_dir || '-';
+
+            const outputDirLink = document.getElementById('output_dir_link');
+            const outputDirSpan = document.getElementById('output_dir');
+
+            if (result.output_dir) {
+                outputDirLink.textContent = result.output_dir;
+                outputDirLink.href = `/jobs/${this.currentJobId}/output/`;
+                outputDirLink.style.display = 'inline';
+                outputDirSpan.style.display = 'none';
+            } else {
+                outputDirSpan.textContent = '-';
+                outputDirLink.style.display = 'none';
+                outputDirSpan.style.display = 'inline';
+            }
 
             // Show results section
             this.resultsSection.style.display = 'block';

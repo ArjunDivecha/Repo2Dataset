@@ -187,6 +187,63 @@ def download_job_file(job_id: str, file_name: str):
     )
 
 
+@app.route("/jobs/<job_id>/output/", methods=["GET"])
+def browse_job_output(job_id: str):
+    """
+    Browse the output directory for a completed job.
+
+    Shows a list of files with download links.
+
+    Returns an HTML page with file listings.
+    """
+    from .jobs import get_job
+    from .services import validate_output_path
+
+    job = get_job(job_id)
+
+    if not job:
+        return jsonify({"error": "Job not found"}), 404
+
+    if job["state"] != "done":
+        return jsonify({"error": "Job not completed"}), 400
+
+    output_dir = Path(job["result"]["output_dir"])
+
+    # Validate path safety
+    if not validate_output_path(str(output_dir), OUTPUT_ROOT):
+        return jsonify({"error": "Invalid output directory"}), 403
+
+    # List files in the output directory
+    files_info = []
+    if output_dir.exists():
+        for file_path in sorted(output_dir.iterdir()):
+            if file_path.is_file():
+                # Determine the download URL based on file type
+                file_name = file_path.name
+                if file_name == "dataset.train.jsonl":
+                    download_url = f"/api/jobs/{job_id}/download/train"
+                elif file_name == "dataset.valid.jsonl":
+                    download_url = f"/api/jobs/{job_id}/download/valid"
+                elif file_name == "stats.json":
+                    download_url = f"/api/jobs/{job_id}/download/stats"
+                else:
+                    # For other files, we don't provide a direct download link
+                    # (could be extended in the future)
+                    download_url = None
+
+                files_info.append({
+                    "name": file_name,
+                    "download_url": download_url
+                })
+
+    return render_template(
+        "browse_output.html",
+        job_id=job_id,
+        output_dir_path=str(output_dir),
+        files=files_info
+    )
+
+
 def main():
     """Run the Flask development server."""
     import argparse
