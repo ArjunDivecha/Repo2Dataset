@@ -340,16 +340,6 @@ h4 {
     line-height: 1.8;
 }
 
-.download-buttons {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.download-buttons .btn {
-    width: 100%;
-}
-
 footer {
     background: var(--gray-900);
     color: white;

@@ -18,9 +18,6 @@ class DatasetGenerator {
         this.logsOutput = document.getElementById('logs_output');
         this.copyLogsBtn = document.getElementById('copy_logs_btn');
         this.resultsSection = document.getElementById('results_section');
-        this.downloadTrainBtn = document.getElementById('download_train');
-        this.downloadValidBtn = document.getElementById('download_valid');
-        this.downloadStatsBtn = document.getElementById('download_stats');
 
         // Initialize
         this.bindEvents();
@@ -30,10 +27,6 @@ class DatasetGenerator {
         this.startBtn.addEventListener('click', () => this.startJob());
         this.resetBtn.addEventListener('click', () => this.resetUI());
         this.copyLogsBtn.addEventListener('click', () => this.copyLogs());
-
-        this.downloadTrainBtn.addEventListener('click', () => this.downloadFile('train'));
-        this.downloadValidBtn.addEventListener('click', () => this.downloadFile('valid'));
-        this.downloadStatsBtn.addEventListener('click', () => this.downloadFile('stats'));
     }
 
     async startJob() {
@@ -202,40 +195,6 @@ class DatasetGenerator {
                 <p>Job ID: <code>${this.currentJobId}</code></p>
             </div>
         `;
-    }
-
-    async downloadFile(fileType) {
-        if (!this.currentJobId) return;
-
-        try {
-            const response = await fetch(`/api/jobs/${this.currentJobId}/download/${fileType}`);
-
-            if (!response.ok) {
-                throw new Error('Failed to download file');
-            }
-
-            // Create blob and download
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-
-            // Set filename based on type
-            const filenames = {
-                'train': 'dataset.train.jsonl',
-                'valid': 'dataset.valid.jsonl',
-                'stats': 'stats.json',
-            };
-            a.download = filenames[fileType];
-
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
-
-        } catch (error) {
-            alert('Failed to download file: ' + error.message);
-        }
     }
 
     copyLogs() {
